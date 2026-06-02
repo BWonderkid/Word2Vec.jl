@@ -1,0 +1,7 @@
+name = "Word2Vec"
+uuid = "d637f0f6-ac70-4a8f-aee7-1ff66afa4c1b"
+authors = ["Berke Aymergen <b.aymergen@campus.tu-berlin.de>"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.11"
