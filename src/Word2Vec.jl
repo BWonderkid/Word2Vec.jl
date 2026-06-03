@@ -1,5 +1,8 @@
 module Word2Vec
 
-# Write your package code here.
+include("loaders.jl")
+include("embeddings.jl")
+
+export load_model, get_embedding
 
 end
