@@ -1,10 +1,15 @@
 using Test
 using Word2Vec
 
+package_root = normpath(joinpath(@__DIR__, ".."))
+
+vec_path = joinpath(@__DIR__, "data", "tiny.vec")
+bin_path = joinpath(@__DIR__, "data", "tiny.bin")
+
 @testset "Word2Vec loaders" begin
 
-    vec_model = load_model("models/cc.en.300.vec")
-    bin_model = load_model("models/GoogleNews-vectors-negative300.bin")
+    vec_model = load_model(vec_path)
+    bin_model = load_model(bin_path)
 
     v1 = get_embedding(vec_model, "computer")
     v2 = get_embedding(bin_model, "computer")

@@ -13,7 +13,42 @@ Pure Julia implementation for loading pretrained Word2Vec embeddings.
 - Load `.bin` (Google Word2Vec binary format)
 - Query embeddings
 
+## Running Tests
+
+The repository includes small test models:
+
+```text
+test/data/tiny.vec
+test/data/tiny.bin
+```
+
+Run:
+
+```julia
+using Pkg
+Pkg.test()
+```
+
+These files are intentionally tiny so tests run quickly and do not require downloading large pretrained models.
+
 ## Usage
+
+Large pretrained models are not included in the repository.
+
+Examples:
+
+- GoogleNews Word2Vec (`.bin`)
+- FastText English vectors (`.vec`)
+
+Place downloaded models in a local `models/` directory:
+
+```text
+models/
+├── GoogleNews-vectors-negative300.bin
+└── cc.en.300.vec
+```
+
+Then load and query embeddings:
 
 ```julia
 using Word2Vec
