@@ -13,6 +13,25 @@ Pure Julia implementation for loading pretrained Word2Vec embeddings.
 - Load `.bin` (Google Word2Vec binary format)
 - Query embeddings
 
+## Installation
+
+Minimum recommended Julia version: 1.11
+
+Install from GitHub:
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/BWonderkid/Word2Vec.jl")
+```
+
+Pretrained models (example): download FastText English vectors and place them in a `models/` directory. Example commands:
+
+```bash
+mkdir -p models
+curl -L -o models/cc.en.300.vec.gz https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.vec.gz
+gunzip models/cc.en.300.vec.gz
+```
+
 ## Running Tests
 
 The repository includes small test models:
@@ -56,3 +75,4 @@ using Word2Vec
 model = load_model("models/cc.en.300.vec")
 vec = get_embedding(model, "computer")
 ```
+
