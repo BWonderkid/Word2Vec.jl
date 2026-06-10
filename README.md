@@ -24,14 +24,6 @@ using Pkg
 Pkg.add(url="https://github.com/BWonderkid/Word2Vec.jl")
 ```
 
-Pretrained models (example): download FastText English vectors and place them in a `models/` directory. Example commands:
-
-```bash
-mkdir -p models
-curl -L -o models/cc.en.300.vec.gz https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.vec.gz
-gunzip models/cc.en.300.vec.gz
-```
-
 ## Running Tests
 
 The repository includes small test models:
