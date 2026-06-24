@@ -22,7 +22,7 @@ To load a model, simply use the `load_model` function:
 using Word2Vec
 
 # Load a model from a file
-model = load_model("../test/data/tiny.vec")
+model = load_model(joinpath(pkgdir(Word2Vec), "test", "data", "tiny.vec"))
 ```
 
 ## Retrieving Word Embeddings
@@ -33,7 +33,7 @@ Once you have loaded a model, you can retrieve the embedding vector for any word
 using Word2Vec
 
 # Load the tiny model
-model = load_model("../test/data/tiny.vec")
+model = load_model(joinpath(pkgdir(Word2Vec), "test", "data", "tiny.vec"))
 
 # Get the embedding for a word
 embedding = get_embedding(model, "hello")
@@ -58,7 +58,7 @@ Once you have an embedding vector, you can perform various operations such as:
 # Example: Get embeddings for multiple words
 using Word2Vec
 
-model = load_model("../test/data/tiny.vec")
+model = load_model(joinpath(pkgdir(Word2Vec), "test", "data", "tiny.vec"))
 words = ["the", "a", "is"]
 embeddings = [get_embedding(model, word) for word in words if get_embedding(model, word) !== nothing]
 
@@ -92,7 +92,7 @@ model = load_model("path/to/embeddings.bin")
 using Word2Vec
 
 # Load the tiny model included in the package
-model = load_model("../test/data/tiny.vec")
+model = load_model(joinpath(pkgdir(Word2Vec), "test", "data", "tiny.vec"))
 
 # Get embedding for a word
 embedding = get_embedding(model, "the")
