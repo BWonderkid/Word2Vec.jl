@@ -4,6 +4,27 @@ struct WordEmbeddingModel
 end
 
 """
+    vocab_size(model::WordEmbeddingModel)::Int
+
+Return the number of words stored in the embedding model.
+"""
+vocab_size(model::WordEmbeddingModel) = length(model.embeddings)
+
+"""
+    embedding_dim(model::WordEmbeddingModel)::Int
+
+Return the dimensionality of the embedding vectors stored in the model.
+"""
+embedding_dim(model::WordEmbeddingModel) = model.dim
+
+"""
+    has_word(model::WordEmbeddingModel, word::AbstractString)::Bool
+
+Return `true` if `word` exists in the model vocabulary.
+"""
+has_word(model::WordEmbeddingModel, word::AbstractString) = haskey(model.embeddings, word)
+
+"""
     load_model(path::String)::WordEmbeddingModel
 
 Load a word embedding model from a file.

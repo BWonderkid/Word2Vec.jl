@@ -65,6 +65,20 @@ Then load and query embeddings:
 using Word2Vec
 
 model = load_model("models/cc.en.300.vec")
+vocab_size(model)
+# => 2000000
+embedding_dim(model)
+# => 300
+has_word(model, "computer")
+# => true
 vec = get_embedding(model, "computer")
+# => 300-element Vector{Float32}
+```
+
+If the word is not in the model, `get_embedding` returns `nothing`:
+
+```julia
+get_embedding(model, "not-a-real-word")
+# => nothing
 ```
 

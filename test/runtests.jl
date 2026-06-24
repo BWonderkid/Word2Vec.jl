@@ -17,4 +17,34 @@ bin_path = joinpath(@__DIR__, "data", "tiny.bin")
 
     @test length(v1) == vec_model.dim
     @test length(v2) == bin_model.dim
+
+    @test vocab_size(vec_model) == length(vec_model.embeddings)
+    @test embedding_dim(vec_model) == vec_model.dim
+    @test has_word(vec_model, "computer")
+    @test !has_word(vec_model, "not-in-the-model")
+
+    @test get_embedding(vec_model, "not-in-the-model") === nothing
+    @test get_embedding(bin_model, "not-in-the-model") === nothing
+
+    single_entry_dir = mktempdir()
+    single_entry_path = joinpath(single_entry_dir, "single.vec")
+    open(single_entry_path, "w") do io
+        println(io, "1 3")
+        println(io, "solo 1.0 2.0 3.0")
+    end
+
+    single_entry_model = load_model(single_entry_path)
+    @test single_entry_model.dim == 3
+    @test vocab_size(single_entry_model) == 1
+    @test embedding_dim(single_entry_model) == 3
+    @test has_word(single_entry_model, "solo")
+    @test get_embedding(single_entry_model, "solo") == Float32[1.0, 2.0, 3.0]
+
+    malformed_dir = mktempdir()
+    malformed_path = joinpath(malformed_dir, "broken.vec")
+    open(malformed_path, "w") do io
+        println(io, "not-a-valid-header")
+    end
+
+    @test_throws Exception load_model(malformed_path)
 end
