@@ -1,6 +1,4 @@
-abstract type EmbeddingModel end
-
-struct WordEmbeddingModel <: EmbeddingModel
+struct WordEmbeddingModel
     embeddings::Dict{String, Vector{Float32}}
     dim::Int
 end
@@ -19,7 +17,7 @@ Supports both `.vec` (text format) and `.bin` (binary format) files.
 - `WordEmbeddingModel`: A struct containing word embeddings and dimension
 
 # Throws
-- `error`: If the file format is not recognized or supported
+- `ArgumentError`: If the file format is not recognized or supported
 
 # Example
 ```julia
@@ -32,7 +30,7 @@ function load_model(path::AbstractString)
     elseif endswith(lowercase(path), ".bin")
         return load_bin(path)
     else
-        error("Unsupported format: $path")
+        throw(ArgumentError("Unsupported format: $path"))
     end
 end
 
@@ -115,23 +113,7 @@ function load_bin(path::AbstractString)
     end
 end
 
-"""
-    read_word(io)::String
 
-Read a null-terminated word from a binary stream.
-
-Reads bytes from the IO stream until a space character (0x20) is encountered,
-then returns the accumulated bytes as a String.
-
-# Arguments
-- `io`: An IO stream positioned at a word in binary format
-
-# Returns
-- `String`: The word read from the stream
-
-# Internal
-This is an internal helper function used by `load_bin`.
-"""
 function read_word(io)
     bytes = UInt8[]
 
@@ -146,23 +128,7 @@ function read_word(io)
     return String(bytes)
 end
 
-"""
-    read_vector(io, dim::Int)::Vector{Float32}
 
-Read a binary-encoded embedding vector from a stream.
-
-Reads `dim` number of Float32 values from the IO stream.
-
-# Arguments
-- `io`: An IO stream positioned at a vector in binary format
-- `dim::Int`: The dimensionality of the embedding vector
-
-# Returns
-- `Vector{Float32}`: The embedding vector
-
-# Internal
-This is an internal helper function used by `load_bin`.
-"""
 function read_vector(io, dim::Int)
     vec = Vector{Float32}(undef, dim)
     read!(io, vec)

@@ -1,8 +1,6 @@
 using Test
 using Word2Vec
 
-package_root = normpath(joinpath(@__DIR__, ".."))
-
 vec_path = joinpath(@__DIR__, "data", "tiny.vec")
 bin_path = joinpath(@__DIR__, "data", "tiny.bin")
 
