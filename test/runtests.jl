@@ -84,36 +84,67 @@ end
     words = collect(keys(model.embeddings))
     w1, w2 = words[1], words[2]
 
-    # cosine similarity of a vector with itself is 1
     vec = get_embedding(model, w1)
     @test cosine_similarity(vec, vec) ≈ 1.0f0
 
-    # cosine similarity is symmetric
     v1 = get_embedding(model, w1)
     v2 = get_embedding(model, w2)
     @test cosine_similarity(v1, v2) ≈ cosine_similarity(v2, v1)
 
-    # similarity of a word with itself is 1
     @test similarity(model, w1, w1) ≈ 1.0f0
 
-    # similarity returns nothing for unknown words
     @test similarity(model, w1, "not-in-vocab") === nothing
     @test similarity(model, "not-in-vocab", w1) === nothing
 
-    # most_similar returns nothing for unknown word
     @test most_similar(model, "not-in-vocab") === nothing
 
-    # most_similar returns at most n results, none of which is the query word
     results = most_similar(model, w1, 3)
     @test results !== nothing
     @test length(results) <= 3
     @test all(r[1] != w1 for r in results)
 
-    # results are sorted by descending similarity
     scores = [r[2] for r in results]
     @test scores == sort(scores, rev=true)
 
-    # requesting more results than vocab allows returns all other words
     all_results = most_similar(model, w1, 10_000)
     @test length(all_results) == vocab_size(model) - 1
+end
+
+@testset "Tokenizer" begin
+    @test tokenize("Hello, World!") == ["hello", "world"]
+    @test tokenize("one two  three") == ["one", "two", "three"]
+    @test tokenize("cats123dogs") == ["cats", "dogs"]
+    @test tokenize("") == []
+end
+
+@testset "Word2Vec training" begin
+    corpus = "the cat sat on the mat the cat ate the rat on the mat"
+
+    model_sg = train_word2vec(corpus; dim=10, window=2, epochs=10, min_count=1, architecture=:skipgram)
+    @test model_sg isa WordEmbeddingModel
+    @test embedding_dim(model_sg) == 10
+    @test has_word(model_sg, "cat")
+    @test has_word(model_sg, "mat")
+    @test !has_word(model_sg, "dog")
+    @test length(get_embedding(model_sg, "cat")) == 10
+
+    model_mc = train_word2vec(corpus; dim=5, min_count=3, epochs=5)
+    @test !has_word(model_mc, "ate")
+    @test has_word(model_mc, "the")
+
+    tokens = tokenize(corpus)
+    model_cbow = train_word2vec(tokens; dim=8, window=2, epochs=5, min_count=1, architecture=:cbow)
+    @test model_cbow isa WordEmbeddingModel
+    @test embedding_dim(model_cbow) == 8
+
+    score = similarity(model_sg, "cat", "rat")
+    @test score isa Float32
+    @test -1.0f0 <= score <= 1.0f0
+
+    neighbors = most_similar(model_sg, "cat", 3)
+    @test neighbors !== nothing
+    @test length(neighbors) <= 3
+
+    @test_throws ArgumentError train_word2vec(tokens; architecture=:transformer)
+    @test_throws ArgumentError train_word2vec(["x", "y"]; min_count=100)
 end
