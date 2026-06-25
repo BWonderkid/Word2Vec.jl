@@ -148,3 +148,42 @@ end
     @test_throws ArgumentError train_word2vec(tokens; architecture=:transformer)
     @test_throws ArgumentError train_word2vec(["x", "y"]; min_count=100)
 end
+
+@testset "ConEc training" begin
+    corpus = "the cat sat on the mat the cat ate the rat on the mat"
+
+    model = train_conec(corpus; dim=10, window=2, epochs=10, min_count=1)
+    @test model isa ConEcModel
+    @test embedding_dim(model) == 10
+    @test has_word(model, "cat")
+    @test !has_word(model, "dog")
+
+    @test length(get_embedding(model, "cat")) == 10
+    @test length(get_context_embedding(model, "cat")) == 10
+
+    @test get_embedding(model, "unknown") === nothing
+    @test get_context_embedding(model, "unknown") === nothing
+
+    model_mc = train_conec(corpus; dim=5, min_count=3, epochs=5)
+    @test !has_word(model_mc, "ate")
+    @test has_word(model_mc, "the")
+
+    wem = to_embedding_model(model)
+    @test wem isa WordEmbeddingModel
+    @test embedding_dim(wem) == 10
+    @test has_word(wem, "cat")
+
+    wem_combined = to_embedding_model(model, combined=true)
+    v_word    = get_embedding(model, "cat")
+    v_context = get_context_embedding(model, "cat")
+    v_combined = get_embedding(wem_combined, "cat")
+    @test v_combined ≈ (v_word .+ v_context) ./ 2.0f0
+
+    score = similarity(wem, "cat", "mat")
+    @test score isa Float32
+    @test -1.0f0 <= score <= 1.0f0
+
+    @test vocab_size(model) == vocab_size(wem)
+
+    @test_throws ArgumentError train_conec(["x"]; min_count=100)
+end
