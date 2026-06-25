@@ -78,3 +78,42 @@ end
 
     @test_throws ArgumentError save_model(original, "model.txt")
 end
+
+@testset "Similarity functions" begin
+    model = load_model(vec_path)
+    words = collect(keys(model.embeddings))
+    w1, w2 = words[1], words[2]
+
+    # cosine similarity of a vector with itself is 1
+    vec = get_embedding(model, w1)
+    @test cosine_similarity(vec, vec) ≈ 1.0f0
+
+    # cosine similarity is symmetric
+    v1 = get_embedding(model, w1)
+    v2 = get_embedding(model, w2)
+    @test cosine_similarity(v1, v2) ≈ cosine_similarity(v2, v1)
+
+    # similarity of a word with itself is 1
+    @test similarity(model, w1, w1) ≈ 1.0f0
+
+    # similarity returns nothing for unknown words
+    @test similarity(model, w1, "not-in-vocab") === nothing
+    @test similarity(model, "not-in-vocab", w1) === nothing
+
+    # most_similar returns nothing for unknown word
+    @test most_similar(model, "not-in-vocab") === nothing
+
+    # most_similar returns at most n results, none of which is the query word
+    results = most_similar(model, w1, 3)
+    @test results !== nothing
+    @test length(results) <= 3
+    @test all(r[1] != w1 for r in results)
+
+    # results are sorted by descending similarity
+    scores = [r[2] for r in results]
+    @test scores == sort(scores, rev=true)
+
+    # requesting more results than vocab allows returns all other words
+    all_results = most_similar(model, w1, 10_000)
+    @test length(all_results) == vocab_size(model) - 1
+end

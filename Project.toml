@@ -3,5 +3,8 @@ uuid = "d637f0f6-ac70-4a8f-aee7-1ff66afa4c1b"
 authors = ["Berke Aymergen <b.aymergen@campus.tu-berlin.de>"]
 version = "1.0.0-DEV"
 
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
 [compat]
 julia = "1.11"
