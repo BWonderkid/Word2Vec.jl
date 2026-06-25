@@ -1,5 +1,6 @@
 using Test
 using Word2Vec
+using Plots
 
 vec_path = joinpath(@__DIR__, "data", "tiny.vec")
 bin_path = joinpath(@__DIR__, "data", "tiny.bin")
@@ -211,4 +212,26 @@ end
     result2 = evaluate_analogies(model, good)
     @test result2.total == 1
     @test result2.correct + (1 - result2.correct) == 1
+end
+
+@testset "Visualization" begin
+    model = load_model(vec_path)
+    words = collect(keys(model.embeddings))
+
+    X = reduce(vcat, [get_embedding(model, w)' for w in words])
+    coords_pca = reduce_pca(X; dims=2)
+    @test size(coords_pca) == (length(words), 2)
+    @test eltype(coords_pca) == Float32
+
+    p = plot_embeddings(model, words[1:3]; method=:pca)
+    @test p isa Plots.Plot
+
+    mixed = [words[1], words[2], "not-in-vocab"]
+    p2 = plot_embeddings(model, mixed; method=:pca)
+    @test p2 isa Plots.Plot
+
+    @test_throws ArgumentError plot_embeddings(model, ["not-in-vocab"]; method=:pca)
+    @test_throws ArgumentError plot_embeddings(model, [words[1], "not-in-vocab"]; method=:pca)
+
+    @test_throws ArgumentError plot_embeddings(model, words[1:2]; method=:umap)
 end
