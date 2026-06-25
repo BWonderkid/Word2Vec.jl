@@ -135,6 +135,74 @@ function load_bin(path::AbstractString)
 end
 
 
+"""
+    save_model(model::WordEmbeddingModel, path::String)
+
+Save a word embedding model to a file.
+
+Supports both `.vec` (text format) and `.bin` (binary format) files.
+
+# Arguments
+- `model::WordEmbeddingModel`: The model to save
+- `path::String`: Destination file path
+
+# Throws
+- `ArgumentError`: If the file extension is not `.vec` or `.bin`
+
+# Example
+```julia
+model = load_model("embeddings.vec")
+save_model(model, "embeddings_copy.bin")
+```
+"""
+function save_model(model::WordEmbeddingModel, path::AbstractString)
+    if endswith(lowercase(path), ".vec")
+        save_vec(model, path)
+    elseif endswith(lowercase(path), ".bin")
+        save_bin(model, path)
+    else
+        throw(ArgumentError("Unsupported format: $path"))
+    end
+end
+
+"""
+    save_vec(model::WordEmbeddingModel, path::String)
+
+Save word embeddings to a text format (.vec) file.
+
+# Arguments
+- `model::WordEmbeddingModel`: The model to save
+- `path::String`: Destination file path
+"""
+function save_vec(model::WordEmbeddingModel, path::AbstractString)
+    open(path, "w") do io
+        println(io, "$(vocab_size(model)) $(model.dim)")
+        for (word, vec) in model.embeddings
+            println(io, "$word $(join(vec, ' '))")
+        end
+    end
+end
+
+"""
+    save_bin(model::WordEmbeddingModel, path::String)
+
+Save word embeddings to a binary format (.bin) file.
+
+# Arguments
+- `model::WordEmbeddingModel`: The model to save
+- `path::String`: Destination file path
+"""
+function save_bin(model::WordEmbeddingModel, path::AbstractString)
+    open(path, "w") do io
+        write(io, "$(vocab_size(model)) $(model.dim)\n")
+        for (word, vec) in model.embeddings
+            write(io, word)
+            write(io, UInt8(0x20))
+            write(io, vec)
+        end
+    end
+end
+
 function read_word(io)
     bytes = UInt8[]
 

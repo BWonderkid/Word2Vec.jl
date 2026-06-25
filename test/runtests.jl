@@ -48,3 +48,33 @@ bin_path = joinpath(@__DIR__, "data", "tiny.bin")
 
     @test_throws Exception load_model(malformed_path)
 end
+
+@testset "Word2Vec savers" begin
+    original = load_model(vec_path)
+
+    tmp = mktempdir()
+
+    saved_vec_path = joinpath(tmp, "saved.vec")
+    save_model(original, saved_vec_path)
+    reloaded_vec = load_model(saved_vec_path)
+
+    @test vocab_size(reloaded_vec) == vocab_size(original)
+    @test embedding_dim(reloaded_vec) == embedding_dim(original)
+    for (word, vec) in original.embeddings
+        @test has_word(reloaded_vec, word)
+        @test get_embedding(reloaded_vec, word) ≈ vec
+    end
+
+    saved_bin_path = joinpath(tmp, "saved.bin")
+    save_model(original, saved_bin_path)
+    reloaded_bin = load_model(saved_bin_path)
+
+    @test vocab_size(reloaded_bin) == vocab_size(original)
+    @test embedding_dim(reloaded_bin) == embedding_dim(original)
+    for (word, vec) in original.embeddings
+        @test has_word(reloaded_bin, word)
+        @test get_embedding(reloaded_bin, word) ≈ vec
+    end
+
+    @test_throws ArgumentError save_model(original, "model.txt")
+end
