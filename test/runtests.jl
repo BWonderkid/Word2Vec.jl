@@ -187,3 +187,28 @@ end
 
     @test_throws ArgumentError train_conec(["x"]; min_count=100)
 end
+
+@testset "Analogy evaluation" begin
+    model = load_model(vec_path)
+    words = collect(keys(model.embeddings))
+
+    @test solve_analogy(model, words[1], words[2], "not-in-vocab") === nothing
+
+    a, b, c = words[1], words[2], words[3]
+    results = solve_analogy(model, a, b, c; n=2)
+    @test results !== nothing
+    @test length(results) <= 2
+    @test all(r[1] ∉ (a, b, c) for r in results)
+    @test all(-1.0f0 <= r[2] <= 1.0f0 for r in results)
+
+    bad = [("x", "y", "z", "w")]
+    result = evaluate_analogies(model, bad)
+    @test result.skipped == 1
+    @test result.total == 0
+    @test result.accuracy == 0.0
+
+    good = [(a, b, c, words[4])]
+    result2 = evaluate_analogies(model, good)
+    @test result2.total == 1
+    @test result2.correct + (1 - result2.correct) == 1
+end
