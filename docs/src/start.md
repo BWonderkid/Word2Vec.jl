@@ -2,11 +2,11 @@
 
 ## Installation
 
-To use Word2Vec.jl, first make sure you have installed the package:
+To use Word2Vec.jl, first make sure you have installed the package. Since it is not yet registered in the Julia General registry, install it directly from GitHub:
 
 ```julia
 using Pkg
-Pkg.add("Word2Vec")
+Pkg.add(url="https://github.com/BWonderkid/Word2Vec.jl")
 ```
 
 ## Loading a Model
@@ -86,6 +86,33 @@ The binary format is more space-efficient. Use `load_model` or `load_bin` to loa
 model = load_model("path/to/embeddings.bin")
 ```
 
+## Saving a Model
+
+You can save any loaded or trained model back to disk. The format is chosen automatically from the file extension:
+
+```julia
+save_model(model, "embeddings.vec")   # text format
+save_model(model, "embeddings.bin")   # binary format
+```
+
+## Computing Similarity
+
+Once you have a model you can measure how related two words are using cosine similarity:
+
+```julia
+# similarity between two words — returns a Float32 in [-1, 1]
+similarity(model, "cat", "dog")
+
+# find the 5 most similar words
+most_similar(model, "cat", 5)
+# => [("dog", 0.91), ("kitten", 0.88), ...]
+
+# raw cosine similarity between two vectors
+cosine_similarity(vec_a, vec_b)
+```
+
+For training your own models, ConEc, analogies, and visualization see the [Training & Features](training.md) page.
+
 ## Example: Complete Workflow
 
 ```@example
@@ -105,4 +132,3 @@ end
 ```
 
 For more detailed API documentation, see the [Home](index.md) page.
-```
