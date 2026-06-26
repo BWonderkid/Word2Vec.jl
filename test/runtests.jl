@@ -5,6 +5,32 @@ using Plots
 vec_path = joinpath(@__DIR__, "data", "tiny.vec")
 bin_path = joinpath(@__DIR__, "data", "tiny.bin")
 
+add_example_models_path = joinpath(@__DIR__, "..", "scripts", "AddExampleModels.jl")
+include(add_example_models_path)
+
+@testset "AddExampleModels" begin
+    test_input_path = joinpath(@__DIR__, "data", "test.txt")
+    test_output_path = joinpath(@__DIR__, "data", "test.txt.gz")
+
+    # Create a test file
+    open(test_input_path, "w") do io
+        write(io, "This is a test file for compression and decompression.")
+    end
+
+    # Compress the test file
+    gunzip_file_compress(test_input_path, test_output_path)
+
+    # Decompress the test file
+    decompressed_output_path = joinpath(@__DIR__, "data", "test_decompressed.txt")
+    gunzip_file_decompress(test_output_path, decompressed_output_path)
+
+    # Verify that the decompressed file matches the original
+    original_content = read(test_input_path, String)
+    decompressed_content = read(decompressed_output_path, String)
+
+    @test original_content == decompressed_content
+end
+
 @testset "Word2Vec loaders" begin
 
     vec_model = load_model(vec_path)

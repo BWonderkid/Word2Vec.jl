@@ -34,6 +34,30 @@ Pkg.test("Word2Vec")
 
 The test suite uses small built-in models (`test/data/tiny.vec` and `test/data/tiny.bin`) so no downloads are needed and everything runs in seconds.
 
+## Example models download
+
+The repository includes a helper script for downloading example models into `models/`.
+First, activate the `scripts/` environment:
+
+```julia
+import Pkg
+Pkg.activate("scripts")
+Pkg.instantiate()
+```
+
+Then run the helper:
+
+```julia
+include("scripts/AddExampleModels.jl")
+add_example_models()
+```
+
+You can pass `silent=true` to disable progress messages:
+
+```julia
+add_example_models(; silent=true)
+```
+
 ## Usage
 
 ### Loading and saving a pre-trained model
@@ -57,6 +81,8 @@ save_model(model, "embeddings.bin")
 Popular pre-trained models that work out of the box:
 - [FastText English vectors](https://fasttext.cc/docs/en/english-vectors.html) (`.vec`)
 - [Google News Word2Vec](https://code.google.com/archive/p/word2vec/) (`.bin`)
+
+If you run `add_example_models()`, the example model files mentioned above will appear in the `models/` folder.
 
 ### Training a model from scratch
 
