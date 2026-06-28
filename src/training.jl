@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Unicode
 
 sigmoid(x::Float32) = 1.0f0 / (1.0f0 + exp(-x))
 
@@ -101,7 +102,15 @@ end
 """
     tokenize(text::AbstractString)::Vector{String}
 
-Split raw text into a sequence of lowercase tokens, dropping punctuation and numbers.
+Split raw text into a sequence of normalized lowercase word tokens.
+
+Normalization steps:
+- Unicode NFKC normalization
+- lowercasing
+- splitting on any non-letter characters (`[^\\p{L}]+`)
+
+This is more robust than ASCII-only tokenization and works better with
+punctuation-heavy or multilingual corpora.
 
 # Example
 ```julia
@@ -110,7 +119,9 @@ tokenize("The quick brown fox!")
 ```
 """
 function tokenize(text::AbstractString)::Vector{String}
-    return String.(split(lowercase(text), r"[^a-z]+", keepempty=false))
+    s = Unicode.normalize(text, :NFKC)
+    s = lowercase(s)
+    return String.(split(s, r"[^\p{L}]+"; keepempty=false))
 end
 
 """
@@ -151,6 +162,14 @@ function train_word2vec(tokens::Vector{String};
 
     architecture in (:skipgram, :cbow) ||
         throw(ArgumentError("architecture must be :skipgram or :cbow, got :$architecture"))
+
+    dim > 0         || throw(ArgumentError("dim must be > 0, got $dim"))
+    window > 0      || throw(ArgumentError("window must be > 0, got $window"))
+    min_count > 0   || throw(ArgumentError("min_count must be > 0, got $min_count"))
+    epochs > 0      || throw(ArgumentError("epochs must be > 0, got $epochs"))
+    negative >= 0   || throw(ArgumentError("negative must be >= 0, got $negative"))
+    Float32(learning_rate) > 0f0 ||
+        throw(ArgumentError("learning_rate must be > 0, got $learning_rate"))
 
     vocab = build_vocab(tokens, min_count)
     V     = length(vocab.idx_to_word)
