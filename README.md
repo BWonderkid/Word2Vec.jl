@@ -37,18 +37,9 @@ The test suite uses small built-in models (`test/data/tiny.vec` and `test/data/t
 ## Example models download
 
 The repository includes a helper script for downloading example models into `models/`.
-First, activate the `scripts/` environment:
 
 ```julia
-import Pkg
-Pkg.activate("scripts")
-Pkg.instantiate()
-```
-
-Then run the helper:
-
-```julia
-include("scripts/AddExampleModels.jl")
+include("scripts/AddExampleFiles.jl")
 add_example_models()
 ```
 
@@ -57,6 +48,25 @@ You can pass `silent=true` to disable progress messages:
 ```julia
 add_example_models(; silent=true)
 ```
+
+## Example datasets download
+
+The repository includes a helper script for downloading example datasets into `data/`
+and generating reusable toy datasets.
+
+```julia
+include("scripts/AddExampleFiles.jl")
+add_example_datasets()
+```
+
+To generate toy datasets from the downloaded source text:
+
+```julia
+include("scripts/PrepareToyDataset.jl")
+generate_toy_datasets(joinpath("data", "text8"); out_dir=joinpath("test", "data"))
+```
+
+You can adjust the output directory, number of files, and line counts as needed.
 
 ## Usage
 
@@ -112,6 +122,29 @@ Key keyword arguments:
 | `epochs` | `5` | Training passes over the corpus |
 | `negative` | `5` | Negative samples per positive pair |
 | `architecture` | `:skipgram` | `:skipgram` or `:cbow` |
+
+### Toy demo for REPL
+
+A small REPL-friendly demo is available in `scripts/ToyDemo.jl`.  
+It trains a model on a toy text sample and prints basic inspection output for selected toy words.
+
+```julia
+include("scripts/ToyDemo.jl")
+model = run_toy_demo()
+```
+
+You can also override the default toy text and query words:
+
+```julia
+model = run_toy_demo(
+    text = "toy car doll block ball teddy bear train puzzle",
+    query_words = ["toy", "car", "doll"],
+    dim = 20,
+    window = 2,
+    epochs = 10,
+    architecture=:cbow
+)
+```
 
 ### Similarity
 
@@ -186,3 +219,6 @@ coords = reduce_tsne(X, dims=2)  # n×2 matrix
 
 - Mikolov et al. (2013) — [Distributed Representations of Words and Phrases](https://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf)
 - Horn (2017) — [Context encoders as a simple but powerful extension of word2vec](https://arxiv.org/abs/1706.02496)
+- [text8 dataset](http://mattmahoney.net/dc/text8.zip)
+- [GoogleNews-vectors-negative300.bin](https://huggingface.co/NathaNn1111/word2vec-google-news-negative-300-bin/resolve/main/GoogleNews-vectors-negative300.bin)
+- [cc.en.300.vec.gz](https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.en.300.vec.gz)
