@@ -1,6 +1,6 @@
 using Random
 using Word2Vec
-include(joinpath(@__DIR__, "AddExampleModels.jl"))
+include(joinpath(@__DIR__, "AddExampleFiles.jl"))
 
 """
     load_dataset_text(path::AbstractString)::String
