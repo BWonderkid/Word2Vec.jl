@@ -1,3 +1,5 @@
+using SparseArrays
+
 """
     ConEcModel
 
@@ -9,14 +11,14 @@ In contrast to standard Word2Vec, ConEc learns two distinct representations per 
 
 # Fields
 - `W::Matrix{Float32}`: word embedding matrix (vocab_size × dim)
-- `C::Matrix{Float32}`: context matrix (vocab_size × dim)
+- `C::SparseMatrixCSC{Float32, Int}`: context matrix (vocab_size × dim)
 - `word_to_idx::Dict{String,Int}`: maps each word to its row index in W and C
 - `idx_to_word::Vector{String}`: maps each row index back to a word
 - `dim::Int`: embedding dimensionality
 """
 struct ConEcModel
     W::Matrix{Float32}
-    C::Matrix{Float32}
+    C::SparseMatrixCSC{Float32, Int}
     word_to_idx::Dict{String, Int}
     idx_to_word::Vector{String}
     dim::Int
@@ -69,7 +71,7 @@ Returns `nothing` if the word is not in the vocabulary.
 function get_context_embedding(model::ConEcModel, word::String)
     idx = get(model.word_to_idx, word, nothing)
     idx === nothing && return nothing
-    return model.C[idx, :]
+    return Vector{Float32}(Array(model.C[idx, :]))
 end
 
 """
@@ -92,7 +94,8 @@ get_embedding(wem, "cat")
 function to_embedding_model(model::ConEcModel; combined::Bool=false)::WordEmbeddingModel
     embeddings = Dict{String, Vector{Float32}}()
     for (i, word) in enumerate(model.idx_to_word)
-        embeddings[word] = combined ? (model.W[i, :] .+ model.C[i, :]) ./ 2.0f0 : model.W[i, :]
+        cvec = Vector{Float32}(Array(model.C[i, :]))
+        embeddings[word] = combined ? (model.W[i, :] .+ cvec) ./ 2.0f0 : model.W[i, :]
     end
     return WordEmbeddingModel(embeddings, model.dim)
 end
@@ -182,7 +185,7 @@ function train_conec(tokens::Vector{String};
     lr = Float32(learning_rate)
 
     W = (rand(Float32, V, dim) .- 0.5f0) ./ Float32(dim)
-    C = zeros(Float32, V, dim)
+    C = spzeros(Float32, V, dim)
 
     table   = build_unigram_table(vocab.counts)
     indices = [vocab.word_to_idx[t] for t in tokens if haskey(vocab.word_to_idx, t)]
