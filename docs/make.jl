@@ -16,6 +16,7 @@ makedocs(;
         "Home" => "index.md",
         "Getting Started" => "start.md",
         "Training & Features" => "training.md",
+        "Scripts" => "scripts.md",
     ],
 )
 

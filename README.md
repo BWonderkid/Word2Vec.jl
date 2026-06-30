@@ -59,6 +59,14 @@ include("scripts/AddExampleFiles.jl")
 add_example_datasets()
 ```
 
+You can pass `silent=true` to disable progress messages:
+
+```julia
+add_example_datasets(; silent=true)
+```
+
+## Generate toy datasets
+
 To generate toy datasets from the downloaded source text:
 
 ```julia
@@ -66,7 +74,26 @@ include("scripts/PrepareToyDataset.jl")
 generate_toy_datasets(joinpath("data", "text8"); out_dir=joinpath("test", "data"))
 ```
 
-You can adjust the output directory, number of files, and line counts as needed.
+You can adjust the output directory, number of files, and line counts as needed: 
+
+```julia
+generate_toy_datasets(
+    joinpath("data", "text8");
+    out_dir=joinpath("test", "data"),
+    sizes=[2000],      # tokens per dataset file
+    n_per_size=3,      # how many files per size
+    n_lines=20,        # number of lines per file
+    seed=42,
+    prefix="toy_dataset"
+)
+```
+
+This generates files like:
+- `test/data/toy_dataset_1.txt`
+- `test/data/toy_dataset_2.txt`
+- `test/data/toy_dataset_3.txt`
+
+Pre-generated toy datasets are also included under `test/data/` for direct use.
 
 ## Usage
 
@@ -125,23 +152,44 @@ Key keyword arguments:
 
 ### Toy demo for REPL
 
-A small REPL-friendly demo is available in `scripts/ToyDemo.jl`.  
-It trains a model on a toy text sample and prints basic inspection output for selected toy words.
+A small REPL-friendly demo is available in `scripts/ToyDemo.jl`.
 
 ```julia
 include("scripts/ToyDemo.jl")
 model = run_toy_demo()
 ```
 
-You can also override the default toy text and query words:
+`run_toy_demo` input priority is:
+1. `dataset_path` (if provided)
+2. `text` (if `dataset_path` is not provided)
+3. built-in default toy text (if neither is provided)
+
+If `query_words` is not provided (or is empty), it is selected automatically from the most frequent tokens.
 
 ```julia
+# from dataset file
 model = run_toy_demo(
-    text = "toy car doll block ball teddy bear train puzzle",
-    query_words = ["toy", "car", "doll"],
-    dim = 20,
-    window = 2,
-    epochs = 10,
+    dataset_path=joinpath("test", "data", "toy_dataset_1.txt"),
+    dim=20,
+    window=2,
+    epochs=10,
+    architecture=:cbow
+)
+
+# from custom raw text
+model = run_toy_demo(
+    text="toy car doll block ball teddy bear train puzzle",
+    query_words=["toy", "car", "doll"],
+    dim=20,
+    window=2,
+    epochs=10,
+    architecture=:cbow
+)
+
+# optional save
+run_toy_demo(
+    dataset_path=joinpath("test", "data", "toy_dataset_1.txt"),
+    model_out_path=joinpath("models", "toy_model.vec"),
     architecture=:cbow
 )
 ```
