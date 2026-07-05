@@ -37,7 +37,8 @@ Extract a file from a `.zip` archive and write it to `output_path`.
 If `member_name` is not provided, the first file in the archive is extracted.
 """
 function zip_file_decompress(input_path::String, output_path::String; member_name::Union{Nothing,String}=nothing)
-    ZipFile.Reader(input_path) do zf
+    zf = ZipFile.Reader(input_path)
+    try
         isempty(zf.files) && error("Zip archive is empty: $input_path")
 
         entry = if member_name === nothing
@@ -52,6 +53,8 @@ function zip_file_decompress(input_path::String, output_path::String; member_nam
         open(output_path, "w") do output_file
             write(output_file, read(entry))
         end
+    finally
+        close(zf)
     end
 end
 
@@ -65,11 +68,11 @@ function zip_file_compress(input_path::String, output_path::String)
     mkpath(dirname(output_path))
 
     ZipFile.Writer(output_path) do zf
-        ZipFile.addfile(zf, basename(input_path)) do file
-            open(input_path, "r") do input_file
-                write(file, read(input_file))
-            end
+        file = ZipFile.addfile(zf, basename(input_path))
+        open(input_path, "r") do input_file
+            write(file, read(input_file))
         end
+        close(file)
     end
 end
 

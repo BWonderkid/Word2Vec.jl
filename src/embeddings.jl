@@ -1,5 +1,5 @@
 """
-    get_embedding(model::WordEmbeddingModel, word::String)::Union{Vector{Float32}, Nothing}
+    get_embedding(model::WordEmbeddingModel, word::AbstractString)::Union{Vector{Float32}, Nothing}
 
 Retrieve the embedding vector for a given word from a loaded model.
 
@@ -19,6 +19,6 @@ if embedding !== nothing
 end
 ```
 """
-function get_embedding(model::WordEmbeddingModel, word::String)
+function get_embedding(model::WordEmbeddingModel, word::AbstractString)
     return get(model.embeddings, word, nothing)
 end

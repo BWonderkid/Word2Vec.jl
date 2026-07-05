@@ -18,7 +18,15 @@ Pure Julia implementation of Word2Vec and ConEc word embeddings — train models
 
 ## Installation
 
-Requires Julia 1.11 or later. Install directly from GitHub:
+Requires Julia 1.11 or later. For a fresh clone of this repository, activate the project and instantiate the dependencies:
+
+```julia
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+```
+
+To install directly from GitHub:
 
 ```julia
 using Pkg
@@ -53,6 +61,8 @@ add_example_models(; silent=true)
 
 The repository includes a helper script for downloading example datasets into `data/`
 and generating reusable toy datasets.
+
+If you are running this from a local clone, activate the project first and instantiate the dependencies before calling the helper.
 
 ```julia
 include("scripts/AddExampleFiles.jl")
@@ -147,8 +157,11 @@ Key keyword arguments:
 | `window` | `5` | Context window radius |
 | `min_count` | `1` | Minimum word frequency |
 | `epochs` | `5` | Training passes over the corpus |
+| `learning_rate` | `0.025f0` | Initial learning rate, decayed linearly during training |
 | `negative` | `5` | Negative samples per positive pair |
 | `architecture` | `:skipgram` | `:skipgram` or `:cbow` |
+
+Calling `train_word2vec(corpus)` without keywords uses the defaults in this table.
 
 ### Toy demo for REPL
 

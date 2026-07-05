@@ -2,6 +2,8 @@ using Test
 using Word2Vec
 using Plots
 
+include(joinpath(@__DIR__, "..", "scripts", "AddExampleFiles.jl"))
+
 vec_path = joinpath(@__DIR__, "data", "tiny.vec")
 bin_path = joinpath(@__DIR__, "data", "tiny.bin")
 
@@ -27,6 +29,9 @@ bin_path = joinpath(@__DIR__, "data", "tiny.bin")
     @test get_embedding(vec_model, "not-in-the-model") === nothing
     @test get_embedding(bin_model, "not-in-the-model") === nothing
 
+    computer_view = SubString("computer", firstindex("computer"), lastindex("computer"))
+    @test get_embedding(vec_model, computer_view) == v1
+
     single_entry_dir = mktempdir()
     single_entry_path = joinpath(single_entry_dir, "single.vec")
     open(single_entry_path, "w") do io
@@ -48,6 +53,19 @@ bin_path = joinpath(@__DIR__, "data", "tiny.bin")
     end
 
     @test_throws Exception load_model(malformed_path)
+
+    wrong_dim_path = joinpath(malformed_dir, "wrong-dim.vec")
+    open(wrong_dim_path, "w") do io
+        println(io, "2 3")
+        println(io, "good 1.0 2.0 3.0")
+        println(io, "bad 4.0 5.0")
+    end
+
+    @test_logs (:warn, r"Skipping malformed embedding row") begin
+        wrong_dim_model = load_model(wrong_dim_path)
+        @test has_word(wrong_dim_model, "good")
+        @test !has_word(wrong_dim_model, "bad")
+    end
 end
 
 @testset "Word2Vec savers" begin
@@ -133,6 +151,10 @@ end
     @test !has_word(model_mc, "ate")
     @test has_word(model_mc, "the")
 
+    seeded_1 = train_word2vec(corpus; dim=8, window=2, epochs=3, min_count=1, seed=123)
+    seeded_2 = train_word2vec(corpus; dim=8, window=2, epochs=3, min_count=1, seed=123)
+    @test get_embedding(seeded_1, "cat") ≈ get_embedding(seeded_2, "cat")
+
     tokens = tokenize(corpus)
     model_cbow = train_word2vec(tokens; dim=8, window=2, epochs=5, min_count=1, architecture=:cbow)
     @test model_cbow isa WordEmbeddingModel
@@ -169,6 +191,10 @@ end
     @test !has_word(model_mc, "ate")
     @test has_word(model_mc, "the")
 
+    seeded_conec_1 = train_conec(corpus; dim=8, window=2, epochs=3, min_count=1, seed=123)
+    seeded_conec_2 = train_conec(corpus; dim=8, window=2, epochs=3, min_count=1, seed=123)
+    @test get_embedding(seeded_conec_1, "cat") ≈ get_embedding(seeded_conec_2, "cat")
+
     wem = to_embedding_model(model)
     @test wem isa WordEmbeddingModel
     @test embedding_dim(wem) == 10
@@ -187,6 +213,25 @@ end
     @test vocab_size(model) == vocab_size(wem)
 
     @test_throws ArgumentError train_conec(["x"]; min_count=100)
+    @test_throws ArgumentError train_conec(["x"]; window=0)
+end
+
+@testset "Example file helpers" begin
+    tmp = mktempdir()
+    zip_in = joinpath(tmp, "sample.zip")
+    extracted = joinpath(tmp, "out.txt")
+
+    zf = ZipFile.Writer(zip_in)
+    try
+        file = ZipFile.addfile(zf, "sample.txt")
+        write(file, "hello zip")
+        close(file)
+    finally
+        close(zf)
+    end
+
+    zip_file_decompress(zip_in, extracted)
+    @test read(extracted, String) == "hello zip"
 end
 
 @testset "Analogy evaluation" begin
@@ -227,11 +272,17 @@ end
     @test p isa Plots.Plot
 
     mixed = [words[1], words[2], "not-in-vocab"]
-    p2 = plot_embeddings(model, mixed; method=:pca)
-    @test p2 isa Plots.Plot
+    @test_logs (:warn, r"Skipping words not found in the vocabulary") begin
+        p2 = plot_embeddings(model, mixed; method=:pca)
+        @test p2 isa Plots.Plot
+    end
 
-    @test_throws ArgumentError plot_embeddings(model, ["not-in-vocab"]; method=:pca)
-    @test_throws ArgumentError plot_embeddings(model, [words[1], "not-in-vocab"]; method=:pca)
+    @test_logs (:warn, r"Skipping words not found in the vocabulary") begin
+        @test_throws ArgumentError plot_embeddings(model, ["not-in-vocab"]; method=:pca)
+    end
+    @test_logs (:warn, r"Skipping words not found in the vocabulary") begin
+        @test_throws ArgumentError plot_embeddings(model, [words[1], "not-in-vocab"]; method=:pca)
+    end
 
     @test_throws ArgumentError plot_embeddings(model, words[1:2]; method=:umap)
 end
