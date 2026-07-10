@@ -7,6 +7,7 @@ include(joinpath(@__DIR__, "..", "scripts", "AddExampleFiles.jl"))
 vec_path = joinpath(@__DIR__, "data", "tiny.vec")
 bin_path = joinpath(@__DIR__, "data", "tiny.bin")
 
+# Test loading embeddings from .vec and .bin files, including malformed input handling.
 @testset "Word2Vec loaders" begin
 
     vec_model = load_model(vec_path)
@@ -68,6 +69,7 @@ bin_path = joinpath(@__DIR__, "data", "tiny.bin")
     end
 end
 
+# Test saving models to .vec and .bin formats and reloading them.
 @testset "Word2Vec savers" begin
     original = load_model(vec_path)
 
@@ -98,6 +100,7 @@ end
     @test_throws ArgumentError save_model(original, "model.txt")
 end
 
+# Test cosine similarity, self-similarity, and nearest-neighbor retrieval.
 @testset "Similarity functions" begin
     model = load_model(vec_path)
     words = collect(keys(model.embeddings))
@@ -129,6 +132,7 @@ end
     @test length(all_results) == vocab_size(model) - 1
 end
 
+# Test token normalization and splitting of raw text into lowercase word tokens.
 @testset "Tokenizer" begin
     @test tokenize("Hello, World!") == ["hello", "world"]
     @test tokenize("one two  three") == ["one", "two", "three"]
@@ -136,6 +140,7 @@ end
     @test tokenize("") == []
 end
 
+# Test Word2Vec training for skip-gram, CBOW, min_count filtering, and deterministic seeds.
 @testset "Word2Vec training" begin
     corpus = "the cat sat on the mat the cat ate the rat on the mat"
 
@@ -172,6 +177,7 @@ end
     @test_throws ArgumentError train_word2vec(["x", "y"]; min_count=100)
 end
 
+# Test ConEc training, context embeddings, and conversion to a standard embedding model.
 @testset "ConEc training" begin
     corpus = "the cat sat on the mat the cat ate the rat on the mat"
 
@@ -216,6 +222,7 @@ end
     @test_throws ArgumentError train_conec(["x"]; window=0)
 end
 
+# Test zip archive helper behavior for extracting example files.
 @testset "Example file helpers" begin
     tmp = mktempdir()
     zip_in = joinpath(tmp, "sample.zip")
@@ -234,6 +241,7 @@ end
     @test read(extracted, String) == "hello zip"
 end
 
+# Test analogy solving and evaluation metrics on example word pairs.
 @testset "Analogy evaluation" begin
     model = load_model(vec_path)
     words = collect(keys(model.embeddings))
@@ -259,6 +267,7 @@ end
     @test result2.correct + (1 - result2.correct) == 1
 end
 
+# Test visualization helpers for PCA and plotting of embedding coordinates.
 @testset "Visualization" begin
     model = load_model(vec_path)
     words = collect(keys(model.embeddings))
