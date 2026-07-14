@@ -28,8 +28,11 @@ model = train_word2vec(tokens; dim=100, architecture=:cbow)
 | `window` | `5` | Context window radius |
 | `min_count` | `1` | Minimum word frequency to include |
 | `epochs` | `5` | Training passes over the corpus |
+| `learning_rate` | `0.025f0` | Initial learning rate, decayed linearly during training |
 | `negative` | `5` | Negative samples per positive pair |
 | `architecture` | `:skipgram` | `:skipgram` or `:cbow` |
+
+Calling `train_word2vec(corpus)` without keywords uses the defaults in this table.
 
 After training the result is a standard `WordEmbeddingModel`, so all similarity and analogy functions work on it directly.
 

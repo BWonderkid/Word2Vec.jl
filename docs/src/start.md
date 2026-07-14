@@ -2,7 +2,15 @@
 
 ## Installation
 
-To use Word2Vec.jl, first make sure you have installed the package. Since it is not yet registered in the Julia General registry, install it directly from GitHub:
+To use Word2Vec.jl from a local checkout, activate the project and instantiate the dependencies first:
+
+```julia
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+```
+
+Since the package is not yet registered in the Julia General registry, you can also install it directly from GitHub:
 
 ```julia
 using Pkg

@@ -34,8 +34,11 @@ function solve_analogy(model::WordEmbeddingModel, a::String, b::String, c::Strin
 
     scores = [(w, cosine_similarity(target, vec))
               for (w, vec) in model.embeddings if w ∉ excluded]
-    sort!(scores, by=x -> x[2], rev=true)
-    return first(scores, n)
+    k = min(n, length(scores))
+    k <= 0 && return empty(scores)
+
+    partialsort!(scores, 1:k, by=x -> x[2], rev=true)
+    return scores[1:k]
 end
 
 """

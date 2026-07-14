@@ -88,6 +88,11 @@ function load_vec(path::AbstractString)
             word = parts[1]
             vec = parse.(Float32, parts[2:end])
 
+            if length(vec) != dim
+                Base.@warn "Skipping malformed embedding row" word=word expected_dim=dim got_dim=length(vec)
+                continue
+            end
+
             embeddings[word] = vec
         end
 

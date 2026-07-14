@@ -77,6 +77,9 @@ function most_similar(model::WordEmbeddingModel, word::String, n::Int=10)
     query === nothing && return nothing
 
     scores = [(w, cosine_similarity(query, vec)) for (w, vec) in model.embeddings if w != word]
-    sort!(scores, by=x -> x[2], rev=true)
-    return first(scores, n)
+    k = min(n, length(scores))
+    k <= 0 && return empty(scores)
+
+    partialsort!(scores, 1:k, by=x -> x[2], rev=true)
+    return scores[1:k]
 end

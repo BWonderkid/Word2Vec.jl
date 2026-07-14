@@ -1,3 +1,6 @@
+using Random
+using SparseArrays
+
 """
     ConEcModel
 
@@ -9,14 +12,14 @@ In contrast to standard Word2Vec, ConEc learns two distinct representations per 
 
 # Fields
 - `W::Matrix{Float32}`: word embedding matrix (vocab_size × dim)
-- `C::Matrix{Float32}`: context matrix (vocab_size × dim)
+- `C::SparseMatrixCSC{Float32, Int}`: context matrix (vocab_size × dim)
 - `word_to_idx::Dict{String,Int}`: maps each word to its row index in W and C
 - `idx_to_word::Vector{String}`: maps each row index back to a word
 - `dim::Int`: embedding dimensionality
 """
 struct ConEcModel
     W::Matrix{Float32}
-    C::Matrix{Float32}
+    C::SparseMatrixCSC{Float32, Int}
     word_to_idx::Dict{String, Int}
     idx_to_word::Vector{String}
     dim::Int
@@ -69,7 +72,7 @@ Returns `nothing` if the word is not in the vocabulary.
 function get_context_embedding(model::ConEcModel, word::String)
     idx = get(model.word_to_idx, word, nothing)
     idx === nothing && return nothing
-    return model.C[idx, :]
+    return Vector{Float32}(Array(model.C[idx, :]))
 end
 
 """
@@ -92,13 +95,14 @@ get_embedding(wem, "cat")
 function to_embedding_model(model::ConEcModel; combined::Bool=false)::WordEmbeddingModel
     embeddings = Dict{String, Vector{Float32}}()
     for (i, word) in enumerate(model.idx_to_word)
-        embeddings[word] = combined ? (model.W[i, :] .+ model.C[i, :]) ./ 2.0f0 : model.W[i, :]
+        cvec = Vector{Float32}(Array(model.C[i, :]))
+        embeddings[word] = combined ? (model.W[i, :] .+ cvec) ./ 2.0f0 : model.W[i, :]
     end
     return WordEmbeddingModel(embeddings, model.dim)
 end
 
 @views function conec_step!(W, C, center::Int, ctx_indices::Vector{Int},
-                            table::Vector{Int}, negative::Int, lr::Float32)
+                            table::Vector{Int}, negative::Int, lr::Float32, rng)
     dim = size(W, 2)
 
     # context embedding h = mean of C rows for the context words (sparse operation)
@@ -116,7 +120,7 @@ end
             target = center
             label  = 1.0f0
         else
-            target = table[rand(1:length(table))]
+            target = table[rand(rng, 1:length(table))]
             target == center && continue
             label  = 0.0f0
         end
@@ -173,7 +177,18 @@ function train_conec(tokens::Vector{String};
                      min_count::Int   = 1,
                      epochs::Int      = 5,
                      learning_rate    = 0.025f0,
-                     negative::Int    = 5)::ConEcModel
+                     negative::Int    = 5,
+                     seed::Union{Nothing,Int} = nothing)::ConEcModel
+
+    dim > 0         || throw(ArgumentError("dim must be > 0, got $dim"))
+    window > 0      || throw(ArgumentError("window must be > 0, got $window"))
+    min_count > 0   || throw(ArgumentError("min_count must be > 0, got $min_count"))
+    epochs > 0      || throw(ArgumentError("epochs must be > 0, got $epochs"))
+    negative >= 0   || throw(ArgumentError("negative must be >= 0, got $negative"))
+    Float32(learning_rate) > 0f0 ||
+        throw(ArgumentError("learning_rate must be > 0, got $learning_rate"))
+
+    rng = seed === nothing ? Random.default_rng() : MersenneTwister(seed)
 
     vocab = build_vocab(tokens, min_count)
     V     = length(vocab.idx_to_word)
@@ -181,8 +196,8 @@ function train_conec(tokens::Vector{String};
 
     lr = Float32(learning_rate)
 
-    W = (rand(Float32, V, dim) .- 0.5f0) ./ Float32(dim)
-    C = zeros(Float32, V, dim)
+    W = (rand(rng, Float32, V, dim) .- 0.5f0) ./ Float32(dim)
+    C = spzeros(Float32, V, dim)
 
     table   = build_unigram_table(vocab.counts)
     indices = [vocab.word_to_idx[t] for t in tokens if haskey(vocab.word_to_idx, t)]
@@ -193,14 +208,14 @@ function train_conec(tokens::Vector{String};
             progress = Float32((epoch - 1) * N + i) / Float32(epochs * N)
             cur_lr   = lr * max(0.0001f0, 1.0f0 - progress)
 
-            w  = rand(1:window)
+            w  = rand(rng, 1:window)
             lo = max(1, i - w)
             hi = min(N, i + w)
 
             ctx = [indices[j] for j in lo:hi if j != i]
             isempty(ctx) && continue
 
-            conec_step!(W, C, indices[i], ctx, table, negative, cur_lr)
+            conec_step!(W, C, indices[i], ctx, table, negative, cur_lr, rng)
         end
     end
 

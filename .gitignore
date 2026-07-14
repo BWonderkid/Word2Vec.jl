@@ -3,6 +3,9 @@
 *.jl.mem
 /Manifest*.toml
 /docs/Manifest*.toml
+/test/Manifest*.toml
+/data/
+/scripts/Manifest*.toml
 /docs/build/
 /.vscode/
 .DS_Store

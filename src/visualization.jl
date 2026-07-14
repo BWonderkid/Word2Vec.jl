@@ -85,6 +85,8 @@ function plot_embeddings(model::WordEmbeddingModel, words::Vector{String};
     method in (:pca, :tsne) || throw(ArgumentError("method must be :pca or :tsne"))
 
     valid_words = filter(w -> has_word(model, w), words)
+    skipped_words = setdiff(words, valid_words)
+    isempty(skipped_words) || Base.@warn "Skipping words not found in the vocabulary" skipped_words=skipped_words
     length(valid_words) < 2 && throw(ArgumentError("At least 2 words must be in the vocabulary for a 2D plot"))
 
     X = Matrix{Float32}(reduce(hcat, [get_embedding(model, w) for w in valid_words])')

@@ -1,4 +1,6 @@
+using Random
 using LinearAlgebra
+using Unicode
 
 sigmoid(x::Float32) = 1.0f0 / (1.0f0 + exp(-x))
 
@@ -45,16 +47,16 @@ function build_unigram_table(counts::Vector{Int}, table_size::Int=Int(1e6))::Vec
 end
 
 @views function skipgram_step!(W_in, W_out, center::Int, context::Int,
-                               table::Vector{Int}, negative::Int, lr::Float32)
-    dim  = size(W_in, 2)
-    grad = zeros(Float32, dim)
+                               table::Vector{Int}, negative::Int, lr::Float32,
+                               grad::AbstractVector{Float32}, rng)
+    fill!(grad, 0f0)
 
     for k in 0:negative
         if k == 0
             target = context
             label  = 1.0f0
         else
-            target = table[rand(1:length(table))]
+            target = table[rand(rng, 1:length(table))]
             target == context && continue
             label = 0.0f0
         end
@@ -67,23 +69,26 @@ end
     W_in[center, :] .-= grad
 end
 
-@views function cbow_step!(W_in, W_out, ctx_indices::Vector{Int}, target::Int,
-                           table::Vector{Int}, negative::Int, lr::Float32)
-    dim      = size(W_in, 2)
-    ctx_mean = zeros(Float32, dim)
-    for ci in ctx_indices
+@views function cbow_step!(W_in, W_out, ctx_indices::Vector{Int}, ctx_len::Int,
+                           target::Int, table::Vector{Int}, negative::Int,
+                           lr::Float32, ctx_mean::AbstractVector{Float32},
+                           grad::AbstractVector{Float32}, rng)
+    fill!(ctx_mean, 0f0)
+    for idx in 1:ctx_len
+        ci = ctx_indices[idx]
         ctx_mean .+= W_in[ci, :]
     end
-    ctx_mean ./= length(ctx_indices)
+    inv_ctx_len = 1f0 / ctx_len
+    ctx_mean .*= inv_ctx_len
 
-    grad = zeros(Float32, dim)
+    fill!(grad, 0f0)
 
     for k in 0:negative
         if k == 0
             t     = target
             label = 1.0f0
         else
-            t     = table[rand(1:length(table))]
+            t     = table[rand(rng, 1:length(table))]
             t == target && continue
             label = 0.0f0
         end
@@ -93,15 +98,26 @@ end
         W_out[t, :] .-= err .* ctx_mean
     end
 
-    for ci in ctx_indices
-        W_in[ci, :] .-= grad ./ length(ctx_indices)
+    for idx in 1:ctx_len
+        ci = ctx_indices[idx]
+        @inbounds for d in eachindex(grad)
+            W_in[ci, d] -= grad[d] * inv_ctx_len
+        end
     end
 end
 
 """
     tokenize(text::AbstractString)::Vector{String}
 
-Split raw text into a sequence of lowercase tokens, dropping punctuation and numbers.
+Split raw text into a sequence of normalized lowercase word tokens.
+
+Normalization steps:
+- Unicode NFKC normalization
+- lowercasing
+- splitting on any non-letter characters (`[^\\p{L}]+`)
+
+This is more robust than ASCII-only tokenization and works better with
+punctuation-heavy or multilingual corpora.
 
 # Example
 ```julia
@@ -110,7 +126,9 @@ tokenize("The quick brown fox!")
 ```
 """
 function tokenize(text::AbstractString)::Vector{String}
-    return String.(split(lowercase(text), r"[^a-z]+", keepempty=false))
+    s = Unicode.normalize(text, :NFKC)
+    s = lowercase(s)
+    return String.(split(s, r"[^\p{L}]+"; keepempty=false))
 end
 
 """
@@ -130,6 +148,8 @@ Train a Word2Vec model on a tokenized corpus using negative sampling.
 - `negative::Int=5`: Number of negative samples per positive training pair
 - `architecture::Symbol=:skipgram`: `:skipgram` or `:cbow`
 
+Calling `train_word2vec(corpus)` without keywords uses the defaults above.
+
 # Returns
 - `WordEmbeddingModel`: Trained model compatible with `get_embedding`, `similarity`, etc.
 
@@ -147,10 +167,21 @@ function train_word2vec(tokens::Vector{String};
                         epochs::Int        = 5,
                         learning_rate      = 0.025f0,
                         negative::Int      = 5,
-                        architecture::Symbol = :skipgram)::WordEmbeddingModel
+                        architecture::Symbol = :skipgram,
+                        seed::Union{Nothing,Int} = nothing)::WordEmbeddingModel
 
     architecture in (:skipgram, :cbow) ||
         throw(ArgumentError("architecture must be :skipgram or :cbow, got :$architecture"))
+
+    dim > 0         || throw(ArgumentError("dim must be > 0, got $dim"))
+    window > 0      || throw(ArgumentError("window must be > 0, got $window"))
+    min_count > 0   || throw(ArgumentError("min_count must be > 0, got $min_count"))
+    epochs > 0      || throw(ArgumentError("epochs must be > 0, got $epochs"))
+    negative >= 0   || throw(ArgumentError("negative must be >= 0, got $negative"))
+    Float32(learning_rate) > 0f0 ||
+        throw(ArgumentError("learning_rate must be > 0, got $learning_rate"))
+
+    rng = seed === nothing ? Random.default_rng() : MersenneTwister(seed)
 
     vocab = build_vocab(tokens, min_count)
     V     = length(vocab.idx_to_word)
@@ -159,8 +190,11 @@ function train_word2vec(tokens::Vector{String};
     lr = Float32(learning_rate)
 
     # W_in: small random values (standard Word2Vec init); W_out: zeros
-    W_in  = (rand(Float32, V, dim) .- 0.5f0) ./ Float32(dim)
+    W_in  = (rand(rng, Float32, V, dim) .- 0.5f0) ./ Float32(dim)
     W_out = zeros(Float32, V, dim)
+    grad  = zeros(Float32, dim)
+    ctx_mean = zeros(Float32, dim)
+    ctx_buf = Vector{Int}(undef, 2window)
 
     table   = build_unigram_table(vocab.counts)
     indices = [vocab.word_to_idx[t] for t in tokens if haskey(vocab.word_to_idx, t)]
@@ -172,19 +206,26 @@ function train_word2vec(tokens::Vector{String};
             progress = Float32((epoch - 1) * N + i) / Float32(epochs * N)
             cur_lr   = lr * max(0.0001f0, 1.0f0 - progress)
 
-            w  = rand(1:window)
+            w  = rand(rng, 1:window)
             lo = max(1, i - w)
             hi = min(N, i + w)
 
             if architecture == :skipgram
                 for j in lo:hi
                     j == i && continue
-                    skipgram_step!(W_in, W_out, indices[i], indices[j], table, negative, cur_lr)
+                    skipgram_step!(W_in, W_out, indices[i], indices[j], table,
+                                   negative, cur_lr, grad, rng)
                 end
             else
-                ctx = [indices[j] for j in lo:hi if j != i]
-                isempty(ctx) && continue
-                cbow_step!(W_in, W_out, ctx, indices[i], table, negative, cur_lr)
+                ctx_len = 0
+                for j in lo:hi
+                    j == i && continue
+                    ctx_len += 1
+                    ctx_buf[ctx_len] = indices[j]
+                end
+                ctx_len == 0 && continue
+                cbow_step!(W_in, W_out, ctx_buf, ctx_len, indices[i], table,
+                           negative, cur_lr, ctx_mean, grad, rng)
             end
         end
     end
